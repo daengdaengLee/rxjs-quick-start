@@ -1,12 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Carousel</title>
-</head>
-<body>
-  
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Carousel</title>
+    <script src="https://unpkg.com/rxjs/bundles/rxjs.umd.min.js"></script>
+    <style>
+      .view {
+        overflow: hidden;
+      }
+
+      .view .container {
+        list-style: none;
+        padding: 0;
+        font-size: 0;
+        white-space: nowrap;
+      }
+
+      .view .panel {
+        width: 100%;
+        min-height: 200px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="carousel" class="view">
+      <ul class="container">
+        <li class="panel" style="background-color: lightgreen"></li>
+        <li class="panel" style="background-color: lightpink"></li>
+        <li class="panel" style="background-color: royalblue"></li>
+        <li class="panel" style="background-color: darkred"></li>
+      </ul>
+    </div>
+  </body>
+  <script>
+    const { fromEvent, merge } = rxjs;
+    const {
+      map,
+      switchMap,
+      takeUntil,
+      first,
+      startWith,
+      withLatestFrom,
+      share
+    } = rxjs.operators;
+
+    const SUPPORT_TOUCH = "ontouchstart" in window;
+    const EVENTS = {
+      start: SUPPORT_TOUCH ? "touchstart" : "mousedown",
+      move: SUPPORT_TOUCH ? "touchmove" : "mousemove",
+      end: SUPPORT_TOUCH ? "touchend" : "mouseup"
+    };
+    const PANEL_COUNT = document.querySelectorAll(".panel").length;
+
+    const $view = document.querySelector("#carousel");
+    const $container = document.querySelector(".container");
+
+    const start$ = fromEvent($view, EVENTS.start).pipe(map(toPos));
+    const move$ = fromEvent($view, EVENTS.move).pipe(map(toPos));
+    const end$ = fromEvent($view, EVENTS.end);
+
+    const size$ = fromEvent(window, "resize").pipe(
+      startWith(0),
+      map(event => $view.clientWidth)
+    );
+
+    const drag$ = start$.pipe(
+      switchMap(start =>
+        move$.pipe(
+          map(move => move - start),
+          takeUntil(end$)
+        )
+      ),
+      share()
+    );
+    const drop$ = drag$.pipe(
+      switchMap(drag =>
+        end$.pipe(
+          map(event => drag),
+          first()
+        )
+      ),
+      withLatestFrom(size$)
+    );
+    
+    const carousel$ = merge(drag$, drop$);
+
+    carousel$.subscribe(console.log);
+
+    /* ======= Helpers ======= */
+
+    function toPos(event) {
+      return SUPPORT_TOUCH ? event.changedTouches[0].pageX : event.pageX;
+    }
+  </script>
 </html>
