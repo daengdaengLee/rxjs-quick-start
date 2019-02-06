@@ -54,6 +54,9 @@
       #suggestLayer {
         margin: 0;
         padding: 0;
+
+        height: 80%;
+        overflow: auto;
       }
 
       .user {
@@ -118,7 +121,8 @@
       pluck,
       tap,
       retry,
-      finalize
+      finalize,
+      share
     } = rxjs.operators;
     const { ajax } = rxjs.ajax;
 
@@ -129,7 +133,8 @@
     const keyup$ = fromEvent($search, "keyup").pipe(
       debounceTime(300),
       map(event => event.target.value),
-      distinctUntilChanged()
+      distinctUntilChanged(),
+      share()
     );
 
     const layerHTML$ = keyup$.pipe(
